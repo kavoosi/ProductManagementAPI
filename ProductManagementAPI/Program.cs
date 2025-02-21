@@ -1,3 +1,7 @@
+
+using Microsoft.EntityFrameworkCore;
+using ProductManagementAPI.Model;
+using Microsoft.OpenApi.Models;
 namespace ProductManagementAPI
 {
     public class Program
@@ -6,29 +10,53 @@ namespace ProductManagementAPI
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
-
-
             // Add services to the container.
-
+            var connectionString = builder.Configuration.GetConnectionString("ProductManagementConnection");
             builder.Services.AddControllers();
+            //// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+            //builder.Services.AddOpenApi();
+
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "Product Management API",
+                    Version = "v1"
+                });
+            });
+
+            builder.Services.AddDbContext<ProductContext>(options =>
+                options.UseSqlServer(connectionString));
 
             var app = builder.Build();
 
+            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
+
+                //app.MapOpenApi();
                 app.UseSwagger();
-                app.UseSwaggerUI();
+                app.UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Product Management API V1");
+                });
             }
 
-
-            // Configure the HTTP request pipeline.
+            app.UseCors(options =>
+                options.WithOrigins("http://localhost:4200")
+                    .AllowAnyMethod()
+                    .AllowAnyHeader());
 
             app.UseAuthorization();
 
 
             app.MapControllers();
+            app.MapGet("/", context =>
+            {
+                context.Response.Redirect("/swagger/index.html");
+                return Task.CompletedTask;
+            });
 
             app.Run();
         }
